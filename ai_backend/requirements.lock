@@ -1,0 +1,3 @@
+# D1 依赖锁：无第三方依赖。
+# 仅使用 Python 标准库（wave / http.server / json / hmac / urllib / unittest 等）。
+# 要求 Python >= 3.10；本次开发与测试实测版本：CPython 3.13.5（Windows x64）。
