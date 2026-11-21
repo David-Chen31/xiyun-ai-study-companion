@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import io
+import struct
 import wave
 
 from . import PROCESSOR_VERSION
@@ -80,10 +81,53 @@ def validate_metadata(metadata) -> tuple[str, str, list]:
         for key in ("lead_ms", "start_ms", "end_ms"):
             if not _is_int(phrase.get(key)):
                 raise _bad_input(f"{key} 必须是整数毫秒", f"{prefix}.{key}")
+        if "entry_ms" not in phrase:
+            raise _bad_input("缺少 entry_ms；无入点时请传 null", f"{prefix}.entry_ms")
         entry = phrase.get("entry_ms")
         if entry is not None and not _is_int(entry):
             raise _bad_input("entry_ms 必须是整数毫秒或 null", f"{prefix}.entry_ms")
     return request_id, revision_id, phrases
+
+
+def _wav_data_size(audio_bytes: bytes) -> int:
+    """先检查 RIFF 容器，避免 wave 对半个采样帧向下取整而漏掉坏包。"""
+    def malformed(message: str):
+        return InspectError(415, "UNSUPPORTED_AUDIO", message, "audio")
+
+    if len(audio_bytes) < 12 or audio_bytes[:4] != b"RIFF" or audio_bytes[8:12] != b"WAVE":
+        raise malformed("仅支持 RIFF/WAVE 音频")
+    riff_end = struct.unpack_from("<I", audio_bytes, 4)[0] + 8
+    if riff_end != len(audio_bytes):
+        raise malformed("WAV 容器长度不匹配，文件可能截断或附加了数据")
+    position = 12
+    data_size = None
+    format_seen = False
+    while position < riff_end:
+        if position + 8 > riff_end:
+            raise malformed("WAV 数据块头截断")
+        name = audio_bytes[position:position + 4]
+        size = struct.unpack_from("<I", audio_bytes, position + 4)[0]
+        start = position + 8
+        next_position = start + size + (size % 2)
+        if next_position > riff_end:
+            raise malformed("WAV 数据块截断")
+        if name == b"fmt ":
+            if format_seen or size < 16:
+                raise malformed("WAV 格式块重复或不完整")
+            format_seen = True
+            _, channels, rate, byte_rate, block_align, bits = struct.unpack_from("<HHIIHH", audio_bytes, start)
+            if bits != 16 or channels not in (1, 2):
+                raise malformed("仅支持 16-bit PCM、单声道或双声道 WAV")
+            if rate <= 0 or block_align != channels * 2 or byte_rate != rate * block_align:
+                raise malformed("WAV 采样率、帧宽或字节率不一致")
+        elif name == b"data":
+            if data_size is not None:
+                raise malformed("WAV 包含多个音频数据块，暂不支持")
+            data_size = size
+        position = next_position
+    if not format_seen or data_size is None:
+        raise malformed("WAV 缺少格式块或音频数据块")
+    return data_size
 
 
 def measure_wav(audio_bytes: bytes) -> tuple[int, int, int]:
@@ -93,6 +137,7 @@ def measure_wav(audio_bytes: bytes) -> tuple[int, int, int]:
     """
     if len(audio_bytes) > MAX_FILE_BYTES:
         raise InspectError(413, "TOO_LARGE", "音频文件超过 100 MB 上限", "audio")
+    data_size = _wav_data_size(audio_bytes)
     try:
         with wave.open(io.BytesIO(audio_bytes), "rb") as wf:
             channels = wf.getnchannels()
@@ -107,10 +152,15 @@ def measure_wav(audio_bytes: bytes) -> tuple[int, int, int]:
                 raise InspectError(415, "UNSUPPORTED_AUDIO", "采样率非法", "audio")
             if nframes <= 0:
                 raise InspectError(415, "UNSUPPORTED_AUDIO", "音频没有有效帧", "audio")
+            if data_size % (channels * sampwidth):
+                raise InspectError(415, "UNSUPPORTED_AUDIO", "WAV 数据截断：存在不完整采样帧", "audio")
+            # 先按精确帧数判断上限；不能让 600 秒加一帧被毫秒取整掩盖。
+            if nframes * 1000 > MAX_DURATION_MS * rate:
+                raise InspectError(413, "TOO_LARGE", "音频时长超过 10 分钟上限", "audio")
             data = wf.readframes(nframes)
     except InspectError:
         raise
-    except (wave.Error, EOFError) as exc:
+    except (wave.Error, EOFError, struct.error, ValueError, OverflowError) as exc:
         raise InspectError(415, "UNSUPPORTED_AUDIO", f"无法解析的 WAV（{exc}）", "audio") from exc
     expected_bytes = nframes * channels * sampwidth
     if len(data) != expected_bytes:
@@ -120,8 +170,6 @@ def measure_wav(audio_bytes: bytes) -> tuple[int, int, int]:
             "audio",
         )
     duration_ms = nframes * 1000 // rate
-    if duration_ms > MAX_DURATION_MS:
-        raise InspectError(413, "TOO_LARGE", "音频时长超过 10 分钟上限", "audio")
     return duration_ms, rate, channels
 
 

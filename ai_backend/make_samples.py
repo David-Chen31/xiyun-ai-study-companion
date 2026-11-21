@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import array
+import copy
 import json
 import math
 import wave
@@ -69,6 +70,10 @@ def main() -> None:
             ],
         },
     }
+    three_invalid = copy.deepcopy(cases["success_three.json"])
+    three_invalid["request_id"] = "q10"
+    three_invalid["phrases"][2]["end_ms"] = 12001
+    cases["invalid_three_boundary.json"] = three_invalid
     for name, payload in cases.items():
         (SAMPLES_DIR / name).write_text(
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

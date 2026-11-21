@@ -83,7 +83,24 @@ curl -s -X POST http://127.0.0.1:8300/internal/v1/inspect \
 python -m unittest discover -s ai_backend/tests -t . -v
 ```
 
-37 项测试，含单元级（WAV 实测、句界、multipart 二进制往返）与真实 HTTP 级（回环随机端口起服务，覆盖 200/400/401/404/413/415/422）。全部使用程序合成样本，不需要真实音频。
+56 项测试，含单元级（WAV 实测、句界、multipart 二进制往返、本机报告）与真实 HTTP 级（回环随机端口起服务，覆盖 200/400/401/404/413/415/422）。全部使用程序合成样本，不需要真实音频。D1 的 37 项历史记录保留在开发记录中，D2 增补结果见 [D2 验证报告](D2验证报告.md)。
+
+## D2：三句验证与真实文件检查
+
+先使用仓库的合成三句样例验证软件。以下命令可直接用于 Windows PowerShell，不需要启动 HTTP 服务：
+
+```powershell
+python -X utf8 -m ai_backend.d2_validate --audio ai_backend/samples/demo_12s.wav --metadata ai_backend/samples/success_three.json --source "程序合成测试音"
+python -X utf8 -m ai_backend.d2_validate --audio ai_backend/samples/demo_12s.wav --metadata ai_backend/samples/invalid_three_boundary.json --source "程序合成测试音"
+```
+
+第一条返回 `status=passed`、`duration_ms=12000`、`phrase_count=3`，第三句入点为空也通过。第二条返回 `http_status=422`、`field=phrases[2].end_ms`，退出码 1 是预期的失败样例结果。
+
+`d2_validate` 是本机检查工具，输出的 `http_status` 表示同一校验结果在服务接口对应的状态码；A 的真实 HTTP 联调需使用上一节的 `replay` 或业务后端客户端。
+
+拿到老师复核的三句 WAV 和句表后，将上面命令的两个输入路径换成受控目录里的实际文件。可选 `--source "样本来源与复核记录编号" --output "本机报告路径.json"` 保存结果。报告包括音频 SHA-256、实际帧数、时长、采样率、声道、位深、耗时，以及成功结果或错误字段。报告只写在本机，工具不上传或复制音频。
+
+真实样本验收须另行与 A 完成，不以程序合成测试音代替老师复核。重复句 ID 的状态码、100 MB 的具体字节口径等沿用 D1 实现并留待团队确认；本轮未改变接口字段。WAV 额外检查容器长度、块完整性、帧宽与字节率；只支持单个 data 块，标准附加元数据块允许存在。WAV 扩展 PCM 格式依赖 Python 的 wave 支持；当前已验证的运行环境是 Python 3.13.5。
 
 ## 五、目录
 
