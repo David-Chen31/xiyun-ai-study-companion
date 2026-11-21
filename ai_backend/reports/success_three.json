@@ -1,0 +1,17 @@
+{
+  "source": "程序合成测试音；不含教师人声",
+  "audio_bytes": 384044,
+  "audio_sha256": "747afeb2c1a2ebad5990715b489e5bfb1c21e64ad8bd9b370af19f6ae5b7913a",
+  "frame_count": 192000,
+  "sample_width_bits": 16,
+  "status": "passed",
+  "http_status": 200,
+  "request_id": "q9",
+  "revision_id": "r1",
+  "processor_version": "wav-inspect-1",
+  "duration_ms": 12000,
+  "sample_rate_hz": 16000,
+  "channels": 1,
+  "phrase_count": 3,
+  "elapsed_ms": 31.18
+}

@@ -1,0 +1,12 @@
+{
+  "source": "程序合成测试音；不含教师人声",
+  "audio_bytes": 384044,
+  "audio_sha256": "747afeb2c1a2ebad5990715b489e5bfb1c21e64ad8bd9b370af19f6ae5b7913a",
+  "status": "failed",
+  "http_status": 422,
+  "request_id": "q10",
+  "code": "INVALID_BOUNDARY",
+  "message": "结束时间超出音频",
+  "field": "phrases[2].end_ms",
+  "elapsed_ms": 26.259
+}

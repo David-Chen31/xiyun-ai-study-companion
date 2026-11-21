@@ -1,0 +1,14 @@
+{
+  "request_id": "q7",
+  "revision_id": "r1",
+  "phrases": [
+    {
+      "id": "p2",
+      "text": "乙",
+      "lead_ms": 4000,
+      "start_ms": 5000,
+      "entry_ms": 5100,
+      "end_ms": 8000
+    }
+  ]
+}
