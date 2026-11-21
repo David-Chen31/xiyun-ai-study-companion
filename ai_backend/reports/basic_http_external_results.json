@@ -1,0 +1,255 @@
+{
+  "pack_version": "basic-audio-1",
+  "processor_version": "wav-inspect-1",
+  "scope": "C 独立服务的基础素材验证；不代表 A 业务联调或教师专业复核",
+  "assets": [
+    {
+      "id": "public-speech",
+      "source_kind": "public_repository_fixture",
+      "sha256": "b3cb1bb16d64cfa7f2f68fc2dfb99320a29d6325430da61c88332ed6ebc36489",
+      "measured_offline": {
+        "frame_count": 485100,
+        "duration_ms": 11000,
+        "sample_rate_hz": 44100,
+        "channels": 2,
+        "sample_width_bits": 16
+      }
+    },
+    {
+      "id": "public-pluck",
+      "source_kind": "public_repository_fixture",
+      "sha256": "0c7b9ee51db4a46087da7530ade979f38e5de7a2e068b5a58cc9cc543aa8e394",
+      "measured_offline": {
+        "frame_count": 3307,
+        "duration_ms": 299,
+        "sample_rate_hz": 11025,
+        "channels": 2,
+        "sample_width_bits": 16
+      }
+    },
+    {
+      "id": "synthetic-three",
+      "source_kind": "project_generated",
+      "sha256": "747afeb2c1a2ebad5990715b489e5bfb1c21e64ad8bd9b370af19f6ae5b7913a",
+      "measured_offline": {
+        "frame_count": 192000,
+        "duration_ms": 12000,
+        "sample_rate_hz": 16000,
+        "channels": 1,
+        "sample_width_bits": 16
+      }
+    },
+    {
+      "id": "public-pluck-unsupported-8bit",
+      "source_kind": "public_repository_fixture",
+      "sha256": "5b7af05fa928568dc9dbf39845da83a48720e019214a0f250aa5e8de0ebec4bb",
+      "measured_offline": {
+        "frame_count": 3307,
+        "duration_ms": 299,
+        "sample_rate_hz": 11025,
+        "channels": 2,
+        "sample_width_bits": 8
+      }
+    }
+  ],
+  "case_count": 12,
+  "passed_count": 12,
+  "all_passed": true,
+  "cases": [
+    {
+      "case": "公开语音三窗口与空入点",
+      "asset": "public-speech",
+      "passed": true,
+      "expected_http_status": 200,
+      "http_status": 200,
+      "response": {
+        "request_id": "basic-speech",
+        "revision_id": "basic-r1",
+        "processor_version": "wav-inspect-1",
+        "duration_ms": 11000,
+        "sample_rate_hz": 44100,
+        "channels": 2,
+        "phrase_count": 3
+      },
+      "mismatches": [],
+      "elapsed_ms": 30.732
+    },
+    {
+      "case": "公开短音效参数",
+      "asset": "public-pluck",
+      "passed": true,
+      "expected_http_status": 200,
+      "http_status": 200,
+      "response": {
+        "request_id": "basic-pluck",
+        "revision_id": "basic-r1",
+        "processor_version": "wav-inspect-1",
+        "duration_ms": 299,
+        "sample_rate_hz": 11025,
+        "channels": 2,
+        "phrase_count": 1
+      },
+      "mismatches": [],
+      "elapsed_ms": 26.326
+    },
+    {
+      "case": "合成三句参数",
+      "asset": "synthetic-three",
+      "passed": true,
+      "expected_http_status": 200,
+      "http_status": 200,
+      "response": {
+        "request_id": "q9",
+        "revision_id": "r1",
+        "processor_version": "wav-inspect-1",
+        "duration_ms": 12000,
+        "sample_rate_hz": 16000,
+        "channels": 1,
+        "phrase_count": 3
+      },
+      "mismatches": [],
+      "elapsed_ms": 16.97
+    },
+    {
+      "case": "第三句结束时间越界",
+      "asset": "public-speech",
+      "passed": true,
+      "expected_http_status": 422,
+      "http_status": 422,
+      "response": {
+        "request_id": "basic-speech",
+        "code": "INVALID_BOUNDARY",
+        "message": "结束时间超出音频",
+        "field": "phrases[2].end_ms"
+      },
+      "mismatches": [],
+      "elapsed_ms": 16.825
+    },
+    {
+      "case": "入点等于结束时间",
+      "asset": "public-speech",
+      "passed": true,
+      "expected_http_status": 422,
+      "http_status": 422,
+      "response": {
+        "request_id": "basic-speech",
+        "code": "INVALID_BOUNDARY",
+        "message": "入点必须位于 [lead_ms, end_ms) 内",
+        "field": "phrases[0].entry_ms"
+      },
+      "mismatches": [],
+      "elapsed_ms": 11.163
+    },
+    {
+      "case": "缺失入点字段",
+      "asset": "public-speech",
+      "passed": true,
+      "expected_http_status": 400,
+      "http_status": 400,
+      "response": {
+        "request_id": "basic-speech",
+        "code": "INVALID_INPUT",
+        "message": "缺少 entry_ms；无入点时请传 null",
+        "field": "phrases[0].entry_ms"
+      },
+      "mismatches": [],
+      "elapsed_ms": 7.763
+    },
+    {
+      "case": "8-bit 格式拒绝",
+      "asset": "public-pluck-unsupported-8bit",
+      "passed": true,
+      "expected_http_status": 415,
+      "http_status": 415,
+      "response": {
+        "request_id": "basic-pluck",
+        "code": "UNSUPPORTED_AUDIO",
+        "message": "仅支持 16-bit PCM、单声道或双声道 WAV",
+        "field": "audio"
+      },
+      "mismatches": [],
+      "elapsed_ms": 23.419
+    },
+    {
+      "case": "截断语音拒绝",
+      "asset": "public-speech",
+      "passed": true,
+      "expected_http_status": 415,
+      "http_status": 415,
+      "response": {
+        "request_id": "basic-speech",
+        "code": "UNSUPPORTED_AUDIO",
+        "message": "WAV 容器长度不匹配，文件可能截断或附加了数据",
+        "field": "audio"
+      },
+      "mismatches": [],
+      "elapsed_ms": 18.654
+    },
+    {
+      "case": "错误令牌",
+      "asset": "public-speech",
+      "passed": true,
+      "expected_http_status": 401,
+      "http_status": 401,
+      "response": {
+        "request_id": null,
+        "code": "INVALID_TOKEN",
+        "message": "内部令牌缺失或不正确"
+      },
+      "mismatches": [],
+      "elapsed_ms": 44.969
+    },
+    {
+      "case": "非法 metadata JSON",
+      "asset": "public-speech",
+      "passed": true,
+      "expected_http_status": 400,
+      "http_status": 400,
+      "response": {
+        "request_id": null,
+        "code": "INVALID_INPUT",
+        "message": "metadata 不是合法 UTF-8 JSON（Expecting property name enclosed in double quotes: line 1 column 2 (char 1)）",
+        "field": "metadata"
+      },
+      "mismatches": [],
+      "elapsed_ms": 7.82
+    },
+    {
+      "case": "重复请求第一次",
+      "asset": "public-speech",
+      "passed": true,
+      "expected_http_status": 200,
+      "http_status": 200,
+      "response": {
+        "request_id": "basic-speech",
+        "revision_id": "basic-r1",
+        "processor_version": "wav-inspect-1",
+        "duration_ms": 11000,
+        "sample_rate_hz": 44100,
+        "channels": 2,
+        "phrase_count": 3
+      },
+      "mismatches": [],
+      "elapsed_ms": 10.077
+    },
+    {
+      "case": "重复请求第二次",
+      "asset": "public-speech",
+      "passed": true,
+      "expected_http_status": 200,
+      "http_status": 200,
+      "response": {
+        "request_id": "basic-speech",
+        "revision_id": "basic-r1",
+        "processor_version": "wav-inspect-1",
+        "duration_ms": 11000,
+        "sample_rate_hz": 44100,
+        "channels": 2,
+        "phrase_count": 3
+      },
+      "mismatches": [],
+      "elapsed_ms": 6.977
+    }
+  ],
+  "service_mode": "existing_service"
+}

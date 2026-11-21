@@ -1,0 +1,30 @@
+{
+  "request_id": "basic-speech",
+  "revision_id": "basic-r1",
+  "phrases": [
+    {
+      "id": "window1",
+      "text": "语音技术窗口一（非语义句界）",
+      "lead_ms": 0,
+      "start_ms": 0,
+      "entry_ms": 0,
+      "end_ms": 3600
+    },
+    {
+      "id": "window2",
+      "text": "语音技术窗口二（非语义句界）",
+      "lead_ms": 3600,
+      "start_ms": 3600,
+      "entry_ms": 3600,
+      "end_ms": 7300
+    },
+    {
+      "id": "window3",
+      "text": "语音技术窗口三（非语义句界）",
+      "lead_ms": 7300,
+      "start_ms": 7300,
+      "entry_ms": null,
+      "end_ms": 11000
+    }
+  ]
+}
