@@ -72,7 +72,7 @@
         "phrase_count": 3
       },
       "mismatches": [],
-      "elapsed_ms": 35.107
+      "elapsed_ms": 38.574
     },
     {
       "case": "公开短音效参数",
@@ -90,7 +90,7 @@
         "phrase_count": 1
       },
       "mismatches": [],
-      "elapsed_ms": 4.953
+      "elapsed_ms": 2.047
     },
     {
       "case": "合成三句参数",
@@ -108,7 +108,7 @@
         "phrase_count": 3
       },
       "mismatches": [],
-      "elapsed_ms": 4.74
+      "elapsed_ms": 27.506
     },
     {
       "case": "第三句结束时间越界",
@@ -123,7 +123,7 @@
         "field": "phrases[2].end_ms"
       },
       "mismatches": [],
-      "elapsed_ms": 11.953
+      "elapsed_ms": 9.612
     },
     {
       "case": "入点等于结束时间",
@@ -138,7 +138,7 @@
         "field": "phrases[0].entry_ms"
       },
       "mismatches": [],
-      "elapsed_ms": 11.488
+      "elapsed_ms": 9.718
     },
     {
       "case": "缺失入点字段",
@@ -153,7 +153,7 @@
         "field": "phrases[0].entry_ms"
       },
       "mismatches": [],
-      "elapsed_ms": 12.561
+      "elapsed_ms": 8.181
     },
     {
       "case": "8-bit 格式拒绝",
@@ -168,7 +168,7 @@
         "field": "audio"
       },
       "mismatches": [],
-      "elapsed_ms": 3.306
+      "elapsed_ms": 1.802
     },
     {
       "case": "截断语音拒绝",
@@ -183,7 +183,7 @@
         "field": "audio"
       },
       "mismatches": [],
-      "elapsed_ms": 26.838
+      "elapsed_ms": 8.487
     },
     {
       "case": "错误令牌",
@@ -197,7 +197,7 @@
         "message": "内部令牌缺失或不正确"
       },
       "mismatches": [],
-      "elapsed_ms": 11.197
+      "elapsed_ms": 7.135
     },
     {
       "case": "非法 metadata JSON",
@@ -212,7 +212,7 @@
         "field": "metadata"
       },
       "mismatches": [],
-      "elapsed_ms": 10.98
+      "elapsed_ms": 9.337
     },
     {
       "case": "重复请求第一次",
@@ -230,7 +230,7 @@
         "phrase_count": 3
       },
       "mismatches": [],
-      "elapsed_ms": 11.732
+      "elapsed_ms": 11.872
     },
     {
       "case": "重复请求第二次",
@@ -248,7 +248,7 @@
         "phrase_count": 3
       },
       "mismatches": [],
-      "elapsed_ms": 15.26
+      "elapsed_ms": 10.818
     }
   ],
   "service_mode": "temporary_loopback_service"
