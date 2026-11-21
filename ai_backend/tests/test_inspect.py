@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import io
 import json
+from pathlib import Path
 import threading
 import unittest
 import wave
@@ -111,6 +112,12 @@ class MeasureWavTests(unittest.TestCase):
         self.assertEqual((ctx.exception.status, ctx.exception.code), (413, "TOO_LARGE"))
         self.assertEqual(ctx.exception.field, "audio")
 
+    def test_d2_disk_sample_measures_actual_wav(self):
+        sample = Path(__file__).resolve().parents[1] / "samples" / "demo_12s.wav"
+        measured = measure_wav(sample.read_bytes())
+        self.assertEqual(measured, (12000, 16000, 1))
+
+
 
 class MetadataTests(unittest.TestCase):
     def test_missing_request_id(self):
@@ -192,6 +199,21 @@ class BoundaryTests(unittest.TestCase):
         with self.assertRaises(InspectError) as ctx:
             inspect(wav_bytes(), meta(phrases=[ok, bad]))
         self.assertEqual(ctx.exception.field, "phrases[1].end_ms")
+
+    def test_d2_three_phrase_disk_metadata_allows_null_entry(self):
+        sample_dir = Path(__file__).resolve().parents[1] / "samples"
+        metadata = json.loads((sample_dir / "success_three.json").read_text(encoding="utf-8"))
+        result = inspect((sample_dir / "demo_12s.wav").read_bytes(), metadata)
+        self.assertEqual(result["phrase_count"], 3)
+        self.assertEqual(result["duration_ms"], 12000)
+
+    def test_d2_three_phrase_disk_metadata_points_to_third_end(self):
+        sample_dir = Path(__file__).resolve().parents[1] / "samples"
+        metadata = json.loads((sample_dir / "invalid_three_boundary.json").read_text(encoding="utf-8"))
+        with self.assertRaises(InspectError) as ctx:
+            inspect((sample_dir / "demo_12s.wav").read_bytes(), metadata)
+        self.assertEqual((ctx.exception.status, ctx.exception.code, ctx.exception.field),
+                         (422, "INVALID_BOUNDARY", "phrases[2].end_ms"))
 
 
 class HttpTests(unittest.TestCase):
