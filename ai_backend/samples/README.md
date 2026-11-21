@@ -8,5 +8,6 @@
 | `success.json` | 契约单句测例，request_id=q7，句 p2 | 200，`phrase_count=1` |
 | `success_three.json` | 契约三句课包，request_id=q9，第三句 `entry_ms=null`（仅听练） | 200，`phrase_count=3` |
 | `invalid_boundary.json` | request_id=q8，`end_ms=13000` 超出 12 秒音频 | 422 `INVALID_BOUNDARY`，`field=phrases[0].end_ms` |
+| `invalid_three_boundary.json` | 三句课包第三句 `end_ms=12001` 超出 12 秒音频 | 422 `INVALID_BOUNDARY`，`field=phrases[2].end_ms` |
 
 句窗与契约课程样例 c1/r1 的三句时间一致，便于 D2 与真实课包对照。
