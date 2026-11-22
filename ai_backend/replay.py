@@ -19,6 +19,23 @@ from pathlib import Path
 
 from .multipart import build_multipart
 from .server import INSPECT_PATH
+from . import PROCESSOR_VERSION
+
+
+def validate_success(result: dict, metadata: dict, *, expected_version: str = PROCESSOR_VERSION) -> None:
+    """Caller-side guard against stale IDs/revisions or unexpected processor output."""
+    if not isinstance(result, dict):
+        raise ValueError("成功结果必须是 JSON 对象")
+    expected = {"request_id": metadata["request_id"], "revision_id": metadata["revision_id"],
+                "processor_version": expected_version, "phrase_count": len(metadata["phrases"])}
+    for field, value in expected.items():
+        if result.get(field) != value:
+            raise ValueError(f"返回 {field} 与本次请求或配置不一致")
+    for field in ("duration_ms", "sample_rate_hz", "channels", "phrase_count"):
+        if type(result.get(field)) is not int or result[field] <= 0:
+            raise ValueError(f"返回 {field} 必须是正整数")
+    if result["channels"] not in (1, 2):
+        raise ValueError("返回声道数不受支持")
 
 
 def send_inspect(base_url: str, token: str, audio: bytes, metadata_text: bytes,
@@ -39,7 +56,8 @@ def send_inspect(base_url: str, token: str, audio: bytes, metadata_text: bytes,
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as err:
-        return err.code, json.loads(err.read().decode("utf-8"))
+        with err:
+            return err.code, json.loads(err.read().decode("utf-8"))
 
 
 def main(argv: list[str] | None = None) -> int:

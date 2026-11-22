@@ -13,6 +13,8 @@
 from __future__ import annotations
 
 import io
+import json
+import math
 import struct
 import wave
 
@@ -20,6 +22,7 @@ from . import PROCESSOR_VERSION
 
 MAX_FILE_BYTES = 100 * 1024 * 1024  # 100 MB
 MAX_DURATION_MS = 10 * 60 * 1000    # 10 分钟
+MAX_METADATA_BYTES = 256 * 1024
 
 
 class InspectError(Exception):
@@ -52,15 +55,56 @@ def _is_int(value) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
+def decode_metadata(raw: bytes):
+    """Bound JSON size and reject ambiguous duplicate keys/non-finite values."""
+    if len(raw) > MAX_METADATA_BYTES:
+        raise InspectError(413, "TOO_LARGE", "metadata 超过 256 KiB", "metadata")
+
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("重复 JSON 字段")
+            result[key] = value
+        return result
+
+    def reject_constant(value):
+        raise ValueError("不接受非有限 JSON 数值")
+
+    try:
+        data = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_object,
+                          parse_constant=reject_constant)
+        stack = [(data, 1)]
+        while stack:
+            value, depth = stack.pop()
+            if isinstance(value, (dict, list)):
+                if depth > 64:
+                    raise ValueError("JSON 嵌套超过 64 层")
+                if isinstance(value, dict):
+                    for key in value:
+                        key.encode("utf-8")
+                    children = value.values()
+                else:
+                    children = value
+                stack.extend((child, depth + 1) for child in children)
+            elif isinstance(value, str):
+                value.encode("utf-8")
+            elif isinstance(value, float) and not math.isfinite(value):
+                raise ValueError("JSON 数值超出有限范围")
+        return data
+    except (UnicodeError, ValueError, RecursionError) as error:
+        raise _bad_input("metadata 必须是有效 UTF-8 JSON，且不能含重复字段或非有限数值", "metadata") from error
+
+
 def validate_metadata(metadata) -> tuple[str, str, list]:
     """校验 metadata 的结构与字段类型（400 级），返回 (request_id, revision_id, phrases)。"""
     if not isinstance(metadata, dict):
         raise _bad_input("metadata 必须是 JSON 对象", "metadata")
     request_id = metadata.get("request_id")
     revision_id = metadata.get("revision_id")
-    if not isinstance(request_id, str) or not request_id:
+    if not isinstance(request_id, str) or not request_id.strip():
         raise _bad_input("request_id 必须是非空字符串", "request_id")
-    if not isinstance(revision_id, str) or not revision_id:
+    if not isinstance(revision_id, str) or not revision_id.strip():
         raise _bad_input("revision_id 必须是非空字符串", "revision_id")
     phrases = metadata.get("phrases")
     if not isinstance(phrases, list) or not phrases:
@@ -71,7 +115,7 @@ def validate_metadata(metadata) -> tuple[str, str, list]:
         if not isinstance(phrase, dict):
             raise _bad_input("句子必须是 JSON 对象", prefix)
         pid = phrase.get("id")
-        if not isinstance(pid, str) or not pid:
+        if not isinstance(pid, str) or not pid.strip():
             raise _bad_input("句 id 必须是非空字符串", f"{prefix}.id")
         if pid in seen_ids:
             raise _bad_boundary("句 ID 重复", f"{prefix}.id")

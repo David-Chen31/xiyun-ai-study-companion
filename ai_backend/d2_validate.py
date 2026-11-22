@@ -16,7 +16,7 @@ from pathlib import Path
 import time
 import wave
 
-from .inspection import MAX_FILE_BYTES, InspectError, inspect
+from .inspection import MAX_FILE_BYTES, MAX_METADATA_BYTES, InspectError, decode_metadata, inspect
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,7 +32,8 @@ def main(argv: list[str] | None = None) -> int:
     request_id = None
     report = {"source": args.source}
     try:
-        metadata = json.loads(args.metadata.read_text(encoding="utf-8"))
+        with args.metadata.open("rb") as metadata_source:
+            metadata = decode_metadata(metadata_source.read(MAX_METADATA_BYTES + 1))
         if isinstance(metadata, dict) and isinstance(metadata.get("request_id"), str):
             request_id = metadata["request_id"]
         # 超限时只读取上限加一个字节，避免本机验证工具无界载入文件。

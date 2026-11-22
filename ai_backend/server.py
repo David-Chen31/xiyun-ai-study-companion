@@ -1,133 +1,165 @@
-"""内部 HTTP 服务：POST /internal/v1/inspect。
-
-仅回环访问的内部接口，Bearer 令牌鉴权。同步处理，无业务库、无发布副作用。
-"""
-
+"""Bounded internal HTTP adapter; no database or publication state."""
 from __future__ import annotations
-
+from email.message import Message
 import hmac
 import json
-import re
+import math
+import socket
 import sys
+import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-
-from .inspection import MAX_FILE_BYTES, InspectError, inspect
+from .inspection import MAX_FILE_BYTES, InspectError, decode_metadata, inspect
 from .multipart import parse_multipart
 
 INSPECT_PATH = "/internal/v1/inspect"
-# multipart 体 = 音频 + metadata + 边界开销，预留 1 MB 余量；音频本身仍按 100 MB 严格检查。
 MAX_BODY_BYTES = MAX_FILE_BYTES + 1024 * 1024
-_BOUNDARY_RE = re.compile(r'boundary="?([^";]+)"?')
+READ_TIMEOUT_SECONDS = 10.0
 
 
 class InspectHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     server_version = "ai-inspect/1"
-    expected_token: str = ""  # 由 make_server 注入
+    expected_token = ""
+    read_timeout = READ_TIMEOUT_SECONDS
 
-    # ---------- 基础工具 ----------
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(self.read_timeout)
 
-    def _send_json(self, status: int, body: dict, close: bool = False) -> None:
-        payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(payload)))
-        if close:
+    def _send_json(self, status, body, close=True):
+        payload = json.dumps(body, ensure_ascii=False, allow_nan=False).encode("utf-8")
+        self.close_connection = True
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-store")
             self.send_header("Connection", "close")
-            self.close_connection = True
-        self.end_headers()
-        self.wfile.write(payload)
+            self.end_headers()
+            self.wfile.write(payload)
+            self.wfile.flush()
+        except (OSError, TimeoutError):
+            pass
 
-    def _send_error(self, err: InspectError, request_id: str | None, close: bool = False) -> None:
-        self._send_json(err.status, err.to_body(request_id), close=close)
+    def log_message(self, fmt, *args):
+        rendered = (fmt % args).encode("unicode_escape").decode("ascii")
+        sys.stderr.write("[ai-inspect] " + rendered + "\n")
 
-    def log_message(self, fmt: str, *args) -> None:  # 精简访问日志
-        sys.stderr.write("[ai-inspect] %s\n" % (fmt % args))
-
-    def _discard_body(self) -> None:
+    def _drain_rejected_body(self):
+        """Respond first, then briefly drain uploads to avoid Windows client resets."""
         try:
-            length = int(self.headers.get("Content-Length", ""))
-        except ValueError:
-            return
-        if 0 <= length <= MAX_BODY_BYTES:
-            self.rfile.read(length)
+            lengths = self.headers.get_all("Content-Length", [])
+            if len(lengths) != 1 or not lengths[0].isascii() or not lengths[0].isdecimal():
+                return
+            remaining = int(lengths[0])
+            if remaining > MAX_BODY_BYTES:
+                return
+            deadline = time.monotonic() + 0.25
+            while remaining and time.monotonic() < deadline:
+                self.connection.settimeout(max(0.001, deadline - time.monotonic()))
+                chunk = self.rfile.read1(min(65536, remaining))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+        except (OSError, ValueError, TimeoutError):
+            pass
 
-    # ---------- 路由 ----------
-
-    def do_POST(self) -> None:
-        if self.path != INSPECT_PATH:
-            self._send_json(404, {
-                "request_id": None, "code": "INVALID_INPUT",
-                "message": f"仅支持 POST {INSPECT_PATH}",
-            })
-            return
-
-        # 1) 鉴权：不合法直接拒绝。先丢弃请求体再回包，避免客户端收到连接重置。
-        auth = self.headers.get("Authorization", "")
-        supplied = auth[len("Bearer "):] if auth.startswith("Bearer ") else ""
-        if not supplied or not hmac.compare_digest(supplied, self.expected_token):
-            self._discard_body()
-            self._send_error(InspectError(401, "INVALID_TOKEN", "内部令牌缺失或不正确"), None, close=True)
-            return
-
-        # 2) 请求体大小与类型。
+    def _content_length(self):
+        if self.headers.get("Transfer-Encoding") is not None:
+            raise InspectError(400, "INVALID_INPUT", "请使用 Content-Length，不支持 Transfer-Encoding")
+        lengths = self.headers.get_all("Content-Length", [])
+        if len(lengths) != 1 or not lengths[0].isascii() or not lengths[0].isdecimal():
+            raise InspectError(400, "INVALID_INPUT", "需要唯一且合法的 Content-Length")
         try:
-            length = int(self.headers.get("Content-Length", ""))
-        except ValueError:
-            length = -1
-        if length < 0:
-            self._send_error(InspectError(400, "INVALID_INPUT", "缺少合法的 Content-Length"), None, close=True)
-            return
+            length = int(lengths[0])
+        except ValueError as error:
+            raise InspectError(400, "INVALID_INPUT", "Content-Length 无效") from error
+        if length <= 0:
+            raise InspectError(400, "INVALID_INPUT", "请求体不能为空")
         if length > MAX_BODY_BYTES:
-            self._send_error(
-                InspectError(413, "TOO_LARGE", "音频文件超过 100 MB 上限", "audio"), None, close=True)
-            return
-        content_type = self.headers.get("Content-Type", "")
-        if not content_type.lower().startswith("multipart/form-data"):
-            self._send_error(
-                InspectError(400, "INVALID_INPUT", "请求必须是 multipart/form-data"), None, close=True)
-            return
-        match = _BOUNDARY_RE.search(content_type)
-        if match is None:
-            self._send_error(InspectError(400, "INVALID_INPUT", "multipart 缺少 boundary"), None, close=True)
-            return
+            raise InspectError(413, "TOO_LARGE", "请求超过大小上限", "audio")
+        return length
 
-        body = self.rfile.read(length)
-
-        # 3) 解析字段。request_id 尽力回传：metadata 可解析时即使后续失败也带回。
-        request_id: str | None = None
+    def _boundary(self):
+        types = self.headers.get_all("Content-Type", [])
+        if len(types) != 1 or len(types[0]) > 1024:
+            raise InspectError(400, "INVALID_INPUT", "需要唯一的合法 Content-Type")
+        message = Message()
+        message["Content-Type"] = types[0]
+        params = message.get_params() or []
+        if (message.get_content_type() != "multipart/form-data"
+                or sum(key.lower() == "boundary" for key, _ in params) != 1):
+            raise InspectError(400, "INVALID_INPUT", "请求必须是带唯一 boundary 的 multipart/form-data")
+        boundary = message.get_boundary()
         try:
-            parts = parse_multipart(body, match.group(1).encode("utf-8"))
-            if "audio" not in parts:
-                raise InspectError(400, "INVALID_INPUT", "缺少 audio 文件字段", "audio")
-            if "metadata" not in parts:
-                raise InspectError(400, "INVALID_INPUT", "缺少 metadata 文本字段", "metadata")
-            try:
-                metadata = json.loads(parts["metadata"].decode("utf-8"))
-            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-                raise InspectError(400, "INVALID_INPUT", f"metadata 不是合法 UTF-8 JSON（{exc}）", "metadata") from exc
+            if not boundary:
+                raise ValueError("missing boundary")
+            return boundary.encode("ascii")
+        except (UnicodeError, ValueError, AttributeError) as error:
+            raise InspectError(400, "INVALID_INPUT", "multipart boundary 无效") from error
+
+    def do_POST(self):
+        if self.path != INSPECT_PATH:
+            self.do_GET()
+            self._drain_rejected_body()
+            return
+        auth = self.headers.get_all("Authorization", [])
+        expected = ("Bearer " + self.expected_token).encode("utf-8")
+        if len(auth) != 1 or not hmac.compare_digest(auth[0].encode("utf-8"), expected):
+            self._send_json(401, InspectError(401, "INVALID_TOKEN", "内部令牌缺失或不正确").to_body(None))
+            self._drain_rejected_body()
+            return
+        request_id = None
+        body_read = False
+        try:
+            length = self._content_length()
+            boundary = self._boundary()
+            deadline = time.monotonic() + self.read_timeout
+            chunks = bytearray()
+            while len(chunks) < length:
+                remaining_time = deadline - time.monotonic()
+                if remaining_time <= 0:
+                    raise TimeoutError()
+                self.connection.settimeout(remaining_time)
+                chunk = self.rfile.read1(min(65536, length - len(chunks)))
+                if not chunk:
+                    raise InspectError(400, "INVALID_INPUT", "请求体截断")
+                chunks.extend(chunk)
+            body_read = True
+            parts = parse_multipart(bytes(chunks), boundary)
+            metadata = decode_metadata(parts["metadata"])
             if isinstance(metadata, dict) and isinstance(metadata.get("request_id"), str):
                 request_id = metadata["request_id"]
-
             result = inspect(parts["audio"], metadata)
-            self._send_json(200, result)
-            self.log_message("inspect ok request_id=%s duration_ms=%s", request_id, result["duration_ms"])
-        except InspectError as err:
-            self._send_error(err, request_id)
-            self.log_message("inspect fail request_id=%s status=%s code=%s field=%s",
-                             request_id, err.status, err.code, err.field)
-        except Exception:  # noqa: BLE001 未预期故障按服务不可用回传
+        except InspectError as error:
+            self._send_json(error.status, error.to_body(request_id))
+            if not body_read:
+                self._drain_rejected_body()
+        except (TimeoutError, ConnectionError, OSError):
+            self._send_json(400, InspectError(400, "INVALID_INPUT", "读取请求体超时或连接中断").to_body(request_id))
+        except Exception:
             traceback.print_exc()
-            self._send_error(InspectError(503, "ANALYSIS_UNAVAILABLE", "分析服务内部故障，可稍后重试"), request_id)
+            self._send_json(503, InspectError(503, "ANALYSIS_UNAVAILABLE", "分析服务内部故障，可稍后重试").to_body(request_id))
+        else:
+            self._send_json(200, result)
 
-    def do_GET(self) -> None:
-        self._send_json(404, {
-            "request_id": None, "code": "INVALID_INPUT",
-            "message": f"仅支持 POST {INSPECT_PATH}",
-        })
+    def do_GET(self):
+        self._send_json(404, {"request_id": None, "code": "INVALID_INPUT",
+                              "message": f"仅支持 POST {INSPECT_PATH}"})
 
 
-def make_server(host: str, port: int, token: str) -> ThreadingHTTPServer:
-    handler = type("BoundInspectHandler", (InspectHandler,), {"expected_token": token})
-    return ThreadingHTTPServer((host, port), handler)
+def make_server(host, port, token, *, read_timeout=READ_TIMEOUT_SECONDS):
+    if (not isinstance(token, str) or not token or not token.isascii()
+            or any(not 33 <= ord(char) <= 126 for char in token)):
+        raise ValueError("内部令牌必须是非空、无空白的可打印 ASCII 字符串")
+    if type(port) is not int or not 0 <= port <= 65535:
+        raise ValueError("端口必须为 0 到 65535 的整数；命令行启动请使用 1 到 65535")
+    if not isinstance(read_timeout, (int, float)) or not math.isfinite(read_timeout) or read_timeout <= 0:
+        raise ValueError("请求读取超时必须是有限正数")
+    handler = type("BoundInspectHandler", (InspectHandler,),
+                   {"expected_token": token, "read_timeout": read_timeout})
+    class Server(ThreadingHTTPServer):
+        daemon_threads = True
+        address_family = socket.AF_INET6 if ":" in host else socket.AF_INET
+    return Server((host, port), handler)
