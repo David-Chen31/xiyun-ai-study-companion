@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>网页逻辑检查 · 戏韵</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <main class="page">
+    <h1>网页逻辑检查</h1>
+    <p>由浏览器直接运行网页的 JavaScript，无需 Node.js。不请求麦克风，不上传数据。</p>
+    <p id="summary" role="status">正在检查…</p>
+    <ol id="results"></ol>
+    <p><a href="/">返回练习页</a></p>
+  </main>
+  <script type="module">
+import { runLogicTests } from './logic-tests.js';
+
+async function run() {
+  const response = await fetch('../示例数据/三句作业.json', { cache: 'no-store' });
+  if (!response.ok) throw new Error('无法读取检查样例');
+  const results = await runLogicTests(await response.json(), location.origin);
+  for (const result of results) {
+    const item = document.createElement('li');
+    item.textContent = result.passed ? `通过：${result.name}` : `失败：${result.name}；${result.message}`;
+    document.getElementById('results').append(item);
+  }
+  const passed = results.filter(result => result.passed).length;
+  document.getElementById('summary').textContent = `${passed} / ${results.length} 项通过。${passed === results.length ? '逻辑检查完成；页面操作和真实音源仍需人工验证。' : '有检查未通过，请查看下面的原因。'}`;
+}
+
+run().catch(error => { document.getElementById('summary').textContent = `检查未完成：${error.message}`; });
+  </script>
+</body>
+</html>

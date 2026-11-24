@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#151814">
+  <title>戏韵 AI 学伴</title>
+  <link rel="icon" href="/assets/icon.png">
+  <link rel="stylesheet" href="/studio/styles.css">
+  <script type="module" src="/studio/app.js"></script>
+</head>
+<body>
+  <header class="site-top">
+    <a class="brand" href="/" aria-label="戏韵 AI 学伴首页"><span aria-hidden="true">韵</span> 戏韵 AI 学伴</a>
+    <a id="back-home" class="back-link" href="/" hidden>← 曲库</a>
+  </header>
+  <main>
+    <section id="home" hidden>
+      <div class="hero">
+        <div class="hero-copy">
+          <h1>听见自己<span>。</span></h1>
+          <p>选一首歌，跟着歌词唱。唱完，回到想练的那一句。</p>
+          <a class="button primary" href="#catalog">开始选曲 <span aria-hidden="true">↓</span></a>
+        </div>
+        <div class="hero-disc" aria-hidden="true"><div></div></div>
+      </div>
+      <section class="catalog" id="catalog" aria-labelledby="catalog-title">
+        <h2 id="catalog-title">本地曲库</h2>
+        <p id="catalog-status" role="status">正在读取曲目…</p>
+        <ul class="song-grid" id="song-list"></ul>
+      </section>
+    </section>
+    <section id="studio" hidden>
+      <div class="track-header">
+        <div><p class="artist" id="artist"></p><h1 id="song-title">正在打开曲目</h1></div>
+        <div class="track-meta"><span id="duration"></span><span id="backing-note" hidden>当前伴奏含原唱 · 建议戴耳机</span></div>
+      </div>
+      <p id="studio-status" class="studio-status" role="status" hidden></p>
+      <div id="practice" class="practice" hidden>
+        <section class="lyrics-pane" aria-labelledby="lyrics-heading">
+          <div class="pane-heading">
+            <h2 id="lyrics-heading">歌词</h2>
+            <button id="follow" class="text-button" type="button" hidden>回到播放位置</button>
+          </div>
+          <div class="lyric-scroll" id="lyric-scroll">
+            <ol class="lyrics" id="lyrics"></ol>
+          </div>
+        </section>
+        <section class="detail-pane" aria-label="唱片或所选句点评">
+          <div class="deck" id="deck">
+            <div class="record-disc" id="record-disc" aria-hidden="true">
+              <div class="record-label"><span id="disc-title"></span><i></i></div>
+            </div>
+            <div class="deck-caption"><strong id="deck-title"></strong><p id="deck-artist"></p></div>
+          </div>
+          <div class="feedback" id="feedback" hidden>
+            <div class="feedback-heading">
+              <h2>本句点评</h2>
+              <button id="close-feedback" class="text-button" type="button">返回唱片</button>
+            </div>
+            <h3 id="feedback-line" tabindex="-1"></h3>
+            <div id="feedback-content"></div>
+          </div>
+        </section>
+        <div class="transport">
+          <div class="progress">
+            <button class="preview-toggle" id="preview" type="button" aria-label="播放伴奏">▶</button>
+            <span id="elapsed">0:00</span>
+            <input id="seek" type="range" min="0" max="1" step="0.01" value="0" aria-label="伴奏播放进度">
+          </div>
+          <div class="actions">
+            <button class="button primary" id="record" type="button"><span class="record-dot" aria-hidden="true"></span><span id="record-label">开始录音</span></button>
+            <button class="button secondary" id="upload" type="button">上传录音</button>
+            <input id="file" type="file" accept="audio/*,.wav,.mp3,.m4a,.webm,.ogg,.flac,.aac" hidden>
+          </div>
+        </div>
+      </div>
+      <details id="timing" class="timing" hidden>
+        <summary>调整上传录音的起点</summary>
+        <p>填写录音开头对应原曲的第几秒。录音比原曲多留了 2 秒空白，可填 −2。</p>
+        <label>对应原曲秒数 <input id="offset" type="number" min="-60" step="0.1"></label>
+        <button class="button secondary" id="apply-offset" type="button">重新分析</button>
+      </details>
+      <audio id="backing" preload="metadata"></audio>
+    </section>
+  </main>
+  <footer class="site-footer">录音在本机处理</footer>
+</body>
+</html>

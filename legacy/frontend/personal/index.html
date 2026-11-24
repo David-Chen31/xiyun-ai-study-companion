@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#14251e">
+  <link rel="manifest" href="/personal/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/personal/icon-192.png">
+  <link rel="icon" href="/personal/icon-192.png" type="image/png">
+  <title>戏韵 AI 学伴 · 个人练唱</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/personal/styles.css">
+  <script type="module" src="/personal/app.js"></script>
+</head>
+<body class="rehearsal-page personal-page">
+  <a class="skip-link" href="#practice">跳到练唱台</a>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand" href="/" aria-label="戏韵 AI 学伴"><span class="brand-mark" aria-hidden="true">韵</span>戏韵 AI 学伴</a>
+      <nav class="rehearsal-nav" aria-label="应用导航">
+        <a class="nav-link" href="#projects">我的练习</a>
+      </nav>
+    </div>
+  </header>
+  <main class="personal-shell">
+    <section class="lesson-cover personal-cover">
+      <div class="cover-copy">
+        <h1>个人练唱</h1>
+        <p>导入原唱，再导入或录下自己的演唱，看看每一句唱得怎么样。</p>
+        <div class="button-row">
+          <button class="button primary" type="button" id="hero-import">导入原音</button>
+          <button class="button" type="button" id="open-example">试听示例</button>
+        </div>
+      </div>
+    </section>
+    <p id="app-status" class="personal-notice" role="status" hidden></p>
+    <div class="personal-grid">
+      <section class="personal-card" id="practice" aria-labelledby="practice-title">
+        <div class="practice-heading">
+          <div><h2 id="practice-title">双轨练唱</h2><p class="subtle" id="current-project" hidden></p></div>
+          <button type="button" class="button quiet" id="new-project" hidden>新建练习</button>
+        </div>
+        <div class="current-phrase" id="current-phrase" hidden>
+          <p class="phrase-text" id="phrase-text"></p>
+          <p class="subtle" id="phrase-time"></p>
+        </div>
+        <div id="tracks"></div>
+        <div class="transport-settings">
+          <label>速度 <select id="rate"><option value="1">原速</option><option value="0.75">0.75×</option><option value="0.5">0.5×</option></select></label>
+          <label>重复 <select id="repeats"><option value="1">一遍</option><option value="3">三遍</option></select></label>
+          <button type="button" class="button quiet" id="play-lead" hidden>听前导</button>
+          <button type="button" class="button" id="stop-play" disabled>停止播放</button>
+          <p class="subtle" id="rate-note" hidden></p>
+        </div>
+        <p id="play-status" class="subtle" role="status" hidden></p>
+        <details class="personal-disclosure" id="context">
+          <summary>唱词与剧种</summary>
+          <label for="transcript">唱词 <span class="subtle">（可选，按点评顺序每句一行）</span></label>
+          <textarea id="transcript" rows="3" maxlength="1000" placeholder="粘贴与原唱对应的唱词"></textarea>
+          <label for="genre">剧种 <span class="subtle">（可选）</span></label>
+          <input id="genre" type="text" maxlength="32" placeholder="如京剧、粤剧">
+        </details>
+        <section class="analysis-card" id="analysis-panel" aria-labelledby="analysis-title" hidden>
+          <h3 id="analysis-title" tabindex="-1">逐句演唱点评</h3>
+          <p class="subtle">确认两边唱的是同一段、同一调，再按停顿分句比较音高。清唱或伴奏较轻时更容易判断。</p>
+          <div class="button-row">
+            <button type="button" class="button primary" id="analyze" disabled>生成逐句点评</button>
+            <button type="button" class="button quiet" id="analyze-single" disabled>只点评选中的一句</button>
+            <button type="button" class="button quiet" id="cancel-analysis" hidden>取消</button>
+          </div>
+          <p id="analysis-status" class="subtle" role="status" hidden></p>
+          <div id="result" class="phrase-report" hidden></div>
+        </section>
+      </section>
+      <aside class="personal-side" aria-label="本机记录">
+        <section class="personal-card" id="projects" aria-labelledby="projects-title">
+          <h2 id="projects-title">我的练习</h2>
+          <div class="save-options">
+            <label for="project-name">练习名称</label>
+            <input id="project-name" type="text" maxlength="80" placeholder="如：练这一句">
+            <label for="save-mode">保留内容</label>
+            <select id="save-mode"><option value="position">仅保存位置和唱词</option><option value="media">同时保存当前音频</option></select>
+            <label id="keep-previous-field" hidden><input id="keep-previous" type="checkbox"> 同时保留上一遍</label>
+            <button type="button" class="button" id="save" disabled>保存到本机</button>
+          </div>
+          <p class="subtle">默认只在本页练习。主动保存的内容由这一浏览器保留。</p>
+          <p id="storage-status" class="subtle" role="status" hidden></p>
+          <ul id="project-list" class="project-list"></ul>
+        </section>
+      </aside>
+    </div>
+    <footer class="personal-footer"><span>文件与录音在设备内处理。</span><span id="offline-status" role="status"></span></footer>
+  </main>
+
+  <template id="track-template">
+    <section class="track">
+      <div class="track-heading">
+        <div><h3 data-part="title"></h3><p class="subtle" data-part="name"></p></div>
+        <span data-part="duration" class="track-duration" hidden></span>
+      </div>
+      <div class="track-actions button-row">
+        <input type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm,.flac,.aac" data-part="file" class="visually-hidden" tabindex="-1">
+        <button type="button" class="button primary" data-part="record" hidden>录一遍</button>
+        <button type="button" class="button primary" data-part="capture" hidden>结束录音</button>
+        <button type="button" class="button quiet" data-part="cancel" hidden>取消录音</button>
+        <button type="button" class="button" data-part="play" hidden></button>
+        <button type="button" class="button advice-action" data-part="advice" aria-controls="analysis-panel" hidden>查看逐句点评</button>
+        <button type="button" class="button" data-part="import"></button>
+        <button type="button" class="button quiet danger" data-part="remove" hidden>移除</button>
+      </div>
+      <div data-part="attempts" class="take-attempts" hidden>
+        <span data-part="attempt-label" class="subtle"></span>
+        <div class="button-row" role="group" aria-label="录音遍次">
+          <button type="button" class="button quiet" data-part="current" aria-pressed="true">这一遍</button>
+          <button type="button" class="button quiet" data-part="previous" aria-pressed="false">刚才</button>
+          <button type="button" class="button quiet danger" data-part="remove-previous">删除上一遍</button>
+        </div>
+      </div>
+      <p class="subtle track-status" data-part="status" role="status" hidden></p>
+      <div class="track-visual" data-part="visual" hidden>
+        <canvas data-part="wave" width="800" height="110" role="img"></canvas>
+        <div class="track-times"><span>0.00 秒</span><span data-part="time"></span><span data-part="extent"></span></div>
+      </div>
+      <details class="personal-disclosure range-controls" data-part="range" hidden>
+        <summary data-part="range-title">调整选段</summary>
+        <div class="range-fields">
+          <label>起点（秒）<input data-part="start" type="number" min="0" step="0.001" inputmode="decimal"></label>
+          <label>终点（秒）<input data-part="end" type="number" min="0" step="0.001" inputmode="decimal"></label>
+          <button type="button" class="button" data-part="apply">应用选段</button>
+          <button type="button" class="button quiet" data-part="reset">整段</button>
+        </div>
+      </details>
+      <div data-part="segments" class="segments" hidden></div>
+    </section>
+  </template>
+  <dialog id="record-consent">
+    <form method="dialog">
+      <h2>使用麦克风</h2>
+      <p>唱完点「结束录音」。录音先留在当前页面，只有你选择同时保存音频时才写入本机。</p>
+      <div class="button-row">
+        <button value="cancel" autofocus>取消</button>
+        <button class="primary" value="record">开始录音</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

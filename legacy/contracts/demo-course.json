@@ -1,0 +1,16 @@
+{
+  "course_id": "c1",
+  "revision_id": "r1",
+  "media_id": "m1",
+  "title": "三句作业 · 合成测试音",
+  "credit": "程序合成示范（软件联调用）",
+  "author_id": "demo-author",
+  "reviewer_id": "demo-reviewer",
+  "grant_ref": "synthetic-demo-12s",
+  "expires_at": "2099-01-01T00:00:00Z",
+  "phrases": [
+    {"id": "p1", "text": "甲", "lead_ms": 0, "start_ms": 500, "entry_ms": 600, "end_ms": 3900},
+    {"id": "p2", "text": "乙", "lead_ms": 4000, "start_ms": 5000, "entry_ms": 5100, "end_ms": 8000},
+    {"id": "p3", "text": "丙", "lead_ms": 8100, "start_ms": 9000, "entry_ms": null, "end_ms": 12000}
+  ]
+}

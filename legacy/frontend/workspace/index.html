@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>班级工作台 · 戏韵 AI 学伴</title>
+  <meta name="theme-color" content="#101915">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/workspace/styles.css">
+  <script type="module" src="/workspace/app.js"></script>
+</head>
+<body class="studio-page">
+  <a class="skip-link" href="#workspace-title">跳到当前任务</a>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a href="/workspace/" class="brand"><span class="brand-mark" aria-hidden="true">韵</span>戏韵学伴</a>
+      <div class="account-nav"><span id="identity"></span><button type="button" id="logout" class="button quiet" hidden>退出登录</button></div>
+    </div>
+  </header>
+  <main class="studio-shell">
+    <nav id="workspace-nav" class="workspace-nav" aria-label="工作台" hidden></nav>
+    <h1 id="workspace-title" tabindex="-1">班级作业</h1>
+    <p id="message" role="status" aria-live="polite">正在读取会话…</p>
+    <div id="workspace"></div>
+  </main>
+  <template id="login">
+    <div class="login-experience">
+      <div class="login-illustration" aria-hidden="true"></div>
+      <section class="panel login">
+        <form data-form="login">
+          <label>账号<input name="account_id" autocomplete="username" required></label>
+          <label>密码<input type="password" name="password" autocomplete="current-password" required></label>
+          <button class="primary" type="submit">登录</button>
+        </form>
+      </section>
+    </div>
+  </template>
+</body>
+</html>

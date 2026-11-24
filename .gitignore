@@ -1,0 +1,14 @@
+.xiyun/
+__pycache__/
+*.pyc
+/library/audio/*
+!/library/audio/.gitkeep
+/*.mp3
+*.gguf
+*.onnx
+*.safetensors
+*.sqlite3
+*.key
+.env
+.env.*
+!.env.example

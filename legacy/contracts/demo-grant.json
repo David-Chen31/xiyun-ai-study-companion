@@ -1,0 +1,7 @@
+{
+  "grant_ref": "synthetic-demo-12s",
+  "audio_sha256": "747afeb2c1a2ebad5990715b489e5bfb1c21e64ad8bd9b370af19f6ae5b7913a",
+  "credit": "程序合成示范（软件联调用）",
+  "purposes": ["onsite_playback", "technical_processing"],
+  "expires_at": "2099-01-01T00:00:00Z"
+}

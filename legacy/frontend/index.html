@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101915">
+  <title>戏韵学伴 · 练一句</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="rehearsal-page">
+  <a class="skip-link" href="#practice">跳到当前句</a>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand" href="/" aria-label="戏韵学伴"><span class="brand-mark" aria-hidden="true">韵</span>戏韵学伴</a>
+      <div class="rehearsal-nav"><a class="nav-link" id="class-home" href="/workspace/" hidden>班级作业</a><a class="nav-link" id="studio-home" href="/workspace/" hidden>班级工作台</a></div>
+    </div>
+  </header>
+  <main class="lesson-page">
+    <div class="lesson-heading lesson-cover">
+      <div class="cover-copy">
+        <p class="cover-kicker">唱段练习</p>
+        <h1 id="lesson-title">正在打开作业…</h1>
+        <p class="lesson-credit" id="credit" hidden></p>
+      </div>
+    </div>
+    <section class="notice" id="notice" role="status" hidden>
+      <h2 id="notice-title"></h2>
+      <p id="notice-description"></p>
+      <div class="button-row">
+        <button id="retry" type="button" class="button primary" hidden>重新加载</button>
+        <a id="workspace-login" class="button primary" href="/workspace/" hidden>登录后继续</a>
+      </div>
+    </section>
+    <div class="lesson-body" id="workspace" hidden>
+      <aside class="lesson-index">
+        <details id="phrase-picker" class="phrase-picker" data-disclosure>
+          <summary><span>乐句</span><span id="phrase-count" class="subtle"></span></summary>
+          <ol id="phrase-list" class="phrase-list"></ol>
+        </details>
+      </aside>
+      <section id="practice" class="practice-card" aria-labelledby="current-text" tabindex="-1">
+        <div class="phrase-heading">
+          <div class="phrase-context"><span id="current-index" class="phrase-index"></span><span id="phrase-role" class="subtle" hidden></span></div>
+          <div class="phrase-navigation" aria-label="切换乐句">
+            <button id="previous-phrase" type="button" class="button quiet" aria-label="上一句"><span aria-hidden="true">‹</span></button>
+            <button id="next-phrase" type="button" class="button quiet" aria-label="下一句"><span aria-hidden="true">›</span></button>
+          </div>
+        </div>
+        <h2 id="current-text" class="current-lyric" tabindex="-1"></h2>
+        <p id="phrase-guidance" class="phrase-guidance" hidden></p>
+
+        <div class="phrase-score">
+          <div class="score-heading"><span id="score-label">本句时间轴</span><span class="score-duration" id="score-duration"></span></div>
+          <div class="score-track" aria-hidden="true">
+            <div class="score-lead" id="score-lead"></div>
+            <canvas id="score-waveform" width="720" height="84" hidden></canvas>
+            <div class="score-playhead" id="score-playhead" hidden></div>
+            <div class="score-entry" id="score-entry" hidden></div>
+          </div>
+          <div class="score-legend"><span id="score-boundary"></span><span id="score-current"></span></div>
+          <span id="playback-stage" class="visually-hidden" role="status"></span>
+        </div>
+
+        <div id="practice-controls" class="practice-controls" aria-label="听练操作">
+          <div class="capture-status" id="capture-status" hidden>
+            <span id="recording-state" role="status"></span><span id="recording-clock" aria-live="off"></span>
+          </div>
+          <div class="practice-actions">
+            <button class="button" id="stop" type="button" hidden>停止示范</button>
+            <button class="button" id="stop-recording" type="button" hidden>结束录音</button>
+            <button class="button" id="play-recording" type="button" hidden><span class="button-icon play-icon" aria-hidden="true"></span>听自己</button>
+            <button class="button primary" id="play" type="button"><span class="button-icon play-icon" aria-hidden="true"></span><span id="play-label">听示范</span></button>
+            <button class="button" id="record" type="button"><span class="button-icon record-icon" aria-hidden="true"></span><span id="record-label">录这一句</span></button>
+          </div>
+          <div id="recording-consent" class="inline-panel" hidden>
+            <p>录音只在此页回听，关闭页面后清除。</p>
+            <div class="button-row">
+              <button id="confirm-recording" class="button primary" type="button">允许使用麦克风</button>
+              <button id="cancel-recording" class="button quiet" type="button">取消</button>
+            </div>
+          </div>
+          <p id="player-message" class="feedback" role="status" hidden></p>
+          <p id="recording-message" class="feedback" role="status" hidden></p>
+          <div id="recording-meta" class="recording-meta" hidden>
+            <span id="recording-take" class="subtle"></span>
+            <button id="delete-recording" class="button quiet" type="button" hidden>删除本次录音</button>
+          </div>
+        </div>
+
+        <div class="practice-footer">
+          <details id="listen-settings" class="inline-disclosure" data-disclosure>
+            <summary>听练设置 <span id="settings-value" class="subtle"></span></summary>
+            <div class="settings-fields">
+              <label>速度 <select id="speed"><option value="1">原速 1×</option><option value="0.75">慢速 0.75×</option></select></label>
+              <label>循环 <select id="repeat"><option value="1">听一遍</option><option value="3">循环三遍</option></select></label>
+            </div>
+            <p id="speed-note" class="subtle" hidden>慢速会降低音调，练音准时请切回原速。</p>
+          </details>
+          <button id="mark-bookmark" class="button quiet bookmark-button" type="button">下次练这句</button>
+        </div>
+        <p id="loop-status" class="feedback" role="status" hidden></p>
+        <p id="bookmark-message" class="feedback" role="status" hidden></p>
+      </section>
+      <section class="lesson-extras" aria-label="作业资料">
+        <details id="phrase-note" class="inline-disclosure" data-disclosure hidden>
+          <summary id="phrase-term"></summary>
+          <p id="phrase-definition"></p><p id="phrase-source" class="subtle"></p>
+        </details>
+        <div id="comparison" hidden>
+          <button id="play-alternative" type="button" class="button quiet">试听对照版本</button>
+        </div>
+        <details id="lesson-information" class="inline-disclosure" data-disclosure>
+          <summary>作业资料</summary>
+          <p id="source-credit" class="subtle"></p>
+          <details id="course-questions" hidden>
+            <summary>查术语与对照</summary>
+            <form id="ask-course">
+              <label for="question-text">术语或简短问题</label>
+              <input id="question-text" name="question" maxlength="200" placeholder="过门和板式有什么区别？" required>
+              <button type="submit" class="button">查释义</button>
+            </form>
+            <div id="question-result" role="status"></div>
+          </details>
+          <button id="clear-bookmark" class="button quiet danger" type="button" hidden>清除待练记录</button>
+        </details>
+      </section>
+    </div>
+  </main>
+  <script type="module">
+    import { startPractice } from "./src/app.js";
+    startPractice();
+  </script>
+</body>
+</html>
