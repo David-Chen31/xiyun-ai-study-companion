@@ -70,41 +70,6 @@ class StudioTests(unittest.TestCase):
         self.assertNotIn("backing", song)
         self.assertEqual(request("/api/karaoke/songs/unknown")[0].status, 404)
 
-    def test_opera_candidates_are_listed_but_not_playable_without_local_assets(self):
-        candidates = json.loads((catalog.ROOT / "library/opera-candidates.json").read_text(encoding="utf-8"))
-        ids = [item["catalog_id"] for item in candidates["items"]]
-        self.assertEqual(len(ids), 6)
-        self.assertEqual(len(set(ids)), len(ids))
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            with patch.object(catalog, "LIBRARY", root), patch.object(catalog, "ROOT", root):
-                response, body = request("/api/karaoke/songs")
-                self.assertEqual(response.status, 200)
-                entries = {entry["id"]: entry for entry in json.loads(body)}
-                for song_id in ids:
-                    with self.subTest(song=song_id):
-                        entry = entries[song_id]
-                        self.assertFalse(entry["available"])
-                        self.assertFalse(entry["prepared"])
-                        self.assertIsNone(entry["duration_ms"])
-                        self.assertEqual(entry["recording_status"], "awaiting_authorized_recording")
-                        self.assertNotIn("source", entry)
-                        self.assertEqual(request("/api/karaoke/songs/" + song_id)[0].status, 404)
-                        self.assertEqual(request("/media/karaoke/" + song_id + "/reference.mp3")[0].status, 404)
-
-    def test_opera_source_notes_match_registered_tracks(self):
-        candidates = json.loads((catalog.ROOT / "library/opera-candidates.json").read_text(encoding="utf-8"))
-        for item in candidates["items"]:
-            with self.subTest(song=item["catalog_id"]):
-                song = catalog.SONGS[item["catalog_id"]]
-                self.assertEqual(song["genre"], item["genre"])
-                self.assertTrue(item["references"])
-                self.assertEqual(item["recording_license"], "not_obtained")
-                self.assertIsNone(item["audio_file"])
-                self.assertIsNone(item["lyric_timing"])
-                self.assertTrue(all(ref["url"].startswith("https://") for ref in item["references"]))
-                self.assertTrue(song["source"].startswith("audio/"))
-
     def test_music_serving_is_scoped_to_library_audio_and_supports_ranges(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

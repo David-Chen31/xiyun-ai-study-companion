@@ -6,59 +6,5 @@
     "source": "audio/我不难过-孙燕姿.mp3",
     "duration_ms": 320400,
     "accent": "#c2e986"
-  },
-  "huangmei-tianxianpei-huajiahai": {
-    "title": "天仙配·夫妻双双把家还",
-    "artist": "黄梅戏 · 演唱版本待选",
-    "source": "audio/huangmei-tianxianpei-huajiahai.mp3",
-    "duration_ms": null,
-    "accent": "#c9df9d",
-    "genre": "黄梅戏",
-    "recording_status": "awaiting_authorized_recording"
-  },
-  "huangmei-nvfuma-zhuangyuan": {
-    "title": "女驸马·谁料皇榜中状元",
-    "artist": "黄梅戏 · 演唱版本待选",
-    "source": "audio/huangmei-nvfuma-zhuangyuan.mp3",
-    "duration_ms": null,
-    "accent": "#edc994",
-    "genre": "黄梅戏",
-    "recording_status": "awaiting_authorized_recording"
-  },
-  "jingju-guifeizuijiu-haidaobinglun": {
-    "title": "贵妃醉酒·海岛冰轮初转腾",
-    "artist": "京剧 · 演唱版本待选",
-    "source": "audio/jingju-guifeizuijiu-haidaobinglun.mp3",
-    "duration_ms": null,
-    "accent": "#ddafbd",
-    "genre": "京剧",
-    "recording_status": "awaiting_authorized_recording"
-  },
-  "yueju-liangzhu-shibaxiangsong": {
-    "title": "梁山伯与祝英台·十八相送",
-    "artist": "越剧 · 演唱版本待选",
-    "source": "audio/yueju-liangzhu-shibaxiangsong.mp3",
-    "duration_ms": null,
-    "accent": "#a9cbdc",
-    "genre": "越剧",
-    "recording_status": "awaiting_authorized_recording"
-  },
-  "yueju-hongloumeng-linmeimei": {
-    "title": "红楼梦·天上掉下个林妹妹",
-    "artist": "越剧 · 演唱版本待选",
-    "source": "audio/yueju-hongloumeng-linmeimei.mp3",
-    "duration_ms": null,
-    "accent": "#cab7e0",
-    "genre": "越剧",
-    "recording_status": "awaiting_authorized_recording"
-  },
-  "yuju-huamulan-nvziburu": {
-    "title": "花木兰·谁说女子不如男",
-    "artist": "豫剧 · 演唱版本待选",
-    "source": "audio/yuju-huamulan-nvziburu.mp3",
-    "duration_ms": null,
-    "accent": "#e8b99b",
-    "genre": "豫剧",
-    "recording_status": "awaiting_authorized_recording"
   }
 }
